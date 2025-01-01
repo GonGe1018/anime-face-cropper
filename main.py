@@ -12,13 +12,13 @@ def get_device_selection():
     """Prompt the user to select a device for processing."""
     print("Choose your device (enter the number):")
     print("1) CPU")
-    print("2) GPU")
+    print("2) GPU(cuda)")
     print("3) MPS")
     device = input().strip()
     if device == "1":
         return "cpu"
     elif device == "2":
-        return "gpu"
+        return "cuda"
     elif device == "3":
         return "mps"
     else:
