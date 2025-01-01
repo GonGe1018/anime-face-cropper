@@ -1,0 +1,6 @@
+crops
+frames
+models/yolov8x6_animeface.pt
+venv
+videos
+.DS_Store   
