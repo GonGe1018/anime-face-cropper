@@ -32,6 +32,17 @@ def get_processing_mode():
     print("3) Process all videos")
     return input("Enter the number: ").strip()
 
+def get_resize_option():
+    """Prompt the user to enter the desired resize dimensions."""
+    resize = input("Enter the desired size for the cropped images (e.g., 128x128 or leave blank to keep original size): ").strip()
+    if resize:
+        try:
+            width, height = map(int, resize.split('x'))
+            return (width, height)
+        except ValueError:
+            print("Invalid size format. Using original size.")
+    return None
+
 def get_video_list(input_videos_dir, mode):
     """Get a list of videos to process based on the selected mode."""
     if mode == "1":
@@ -46,7 +57,7 @@ def get_video_list(input_videos_dir, mode):
     else:
         raise ValueError("Invalid processing mode selected.")
 
-def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_dir, model, device, starting_frame=0):
+def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize=None, starting_frame=0):
     """Process a single video to extract frames and crop detected faces."""
     input_video_path = os.path.join(input_videos_dir, video_file)
     if not os.path.exists(input_video_path):
@@ -119,22 +130,9 @@ def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_
 
                     cropped_face = padded_frame[y1_exp:y2_exp, x1_exp:x2_exp]
 
-                    # Adjust to enforce square aspect ratio after padding
-                    cropped_height, cropped_width = cropped_face.shape[:2]
-                    if cropped_height > cropped_width:
-                        diff = cropped_height - cropped_width
-                        pad_left = diff // 2
-                        pad_right = diff - pad_left
-                        cropped_face = cv2.copyMakeBorder(
-                            cropped_face, 0, 0, pad_left, pad_right, cv2.BORDER_CONSTANT, value=(0, 0, 0)
-                        )
-                    elif cropped_width > cropped_height:
-                        diff = cropped_width - cropped_height
-                        pad_top = diff // 2
-                        pad_bottom = diff - pad_top
-                        cropped_face = cv2.copyMakeBorder(
-                            cropped_face, pad_top, pad_bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0)
-                        )
+                    # Resize if resize option is provided
+                    if resize:
+                        cropped_face = cv2.resize(cropped_face, resize, interpolation=cv2.INTER_LINEAR)
 
                     crop_file = os.path.join(video_crops_dir, f"frame_{frame_idx:04d}_face_{i}.jpg")
                     cv2.imwrite(crop_file, cropped_face)
@@ -155,17 +153,18 @@ def main():
 
     device = get_device_selection()
     processing_mode = get_processing_mode()
+    resize_option = get_resize_option()
     model = YOLO("./models/yolov8x6_animeface.pt")
     model.to(device)
 
     if processing_mode == "2":
         video_list = get_video_list(input_videos_dir, processing_mode)
         for video, start_frame in video_list:
-            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, start_frame)
+            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option, start_frame)
     else:
         video_list = get_video_list(input_videos_dir, processing_mode)
         for video in video_list:
-            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device)
+            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option)
 
     print("All tasks completed!")
 
