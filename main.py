@@ -8,6 +8,16 @@ def create_directory(path):
     """Utility function to create a directory if it doesn't exist."""
     os.makedirs(path, exist_ok=True)
 
+def delete_directory(path):
+    """Utility function to delete a directory if it exists."""
+    if os.path.exists(path):
+        for root, dirs, files in os.walk(path, topdown=False):
+            for file in files:
+                os.remove(os.path.join(root, file))
+            for dir in dirs:
+                os.rmdir(os.path.join(root, dir))
+        os.rmdir(path)
+
 def get_device_selection():
     """Prompt the user to select a device for processing."""
     print("Choose your device (enter the number):")
@@ -43,6 +53,17 @@ def get_resize_option():
             print("Invalid size format. Using original size.")
     return None
 
+def get_clear_frames_option():
+    """Prompt the user to decide whether to clear frames after processing."""
+    clear_frames = input("Do you want to delete frames after processing? (yes/no): ").strip().lower()
+    if clear_frames == "yes":
+        clear_interval = input("Enter the interval (in frames) to delete frames during processing (e.g., 10000): ").strip()
+        try:
+            return int(clear_interval)
+        except ValueError:
+            print("Invalid interval. Defaulting to no clearing during processing.")
+    return None
+
 def get_video_list(input_videos_dir, mode):
     """Get a list of videos to process based on the selected mode."""
     if mode == "1":
@@ -57,7 +78,7 @@ def get_video_list(input_videos_dir, mode):
     else:
         raise ValueError("Invalid processing mode selected.")
 
-def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize=None, starting_frame=0):
+def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize=None, clear_interval=None, starting_frame=0):
     """Process a single video to extract frames and crop detected faces."""
     input_video_path = os.path.join(input_videos_dir, video_file)
     if not os.path.exists(input_video_path):
@@ -137,10 +158,19 @@ def process_video(video_file, input_videos_dir, output_frames_dir, output_crops_
                     crop_file = os.path.join(video_crops_dir, f"frame_{frame_idx:04d}_face_{i}.jpg")
                     cv2.imwrite(crop_file, cropped_face)
 
+            if clear_interval and frame_idx > 0 and frame_idx % clear_interval == 0:
+                for file in os.listdir(video_frames_dir):
+                    os.remove(os.path.join(video_frames_dir, file))
+                print(f"Cleared frames up to frame {frame_idx} for video {video_file}.")
+
             frame_idx += 1
             frame_pbar.update(1)
 
     cap.release()
+
+    delete_directory(video_frames_dir)
+    print(f"Frames for video {video_file} have been deleted.")
+
     print(f"Finished processing video: {video_file}")
 
 def main():
@@ -154,17 +184,18 @@ def main():
     device = get_device_selection()
     processing_mode = get_processing_mode()
     resize_option = get_resize_option()
+    clear_interval = get_clear_frames_option()
     model = YOLO("./models/yolov8x6_animeface.pt")
     model.to(device)
 
     if processing_mode == "2":
         video_list = get_video_list(input_videos_dir, processing_mode)
         for video, start_frame in video_list:
-            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option, start_frame)
+            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option, clear_interval, start_frame)
     else:
         video_list = get_video_list(input_videos_dir, processing_mode)
         for video in video_list:
-            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option)
+            process_video(video, input_videos_dir, output_frames_dir, output_crops_dir, model, device, resize_option, clear_interval)
 
     print("All tasks completed!")
 
