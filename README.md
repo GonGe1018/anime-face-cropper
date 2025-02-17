@@ -1,9 +1,15 @@
 <div align="center">
   
-# anime-face-cropper 
+# anime-face-cropper
 
 애니메이션 영상에서 개별 프레임을 추출한 뒤, YOLO 모델을 사용해 얼굴을 감지하고, 1:1 비율로 자른 이미지를 저장합니다.<br>
 필요할 경우 검은색 패딩을 추가하여 얼굴 이미지를 정사각형으로 보정합니다.
+<br>
+
+<img src="1.png" width="45%">  
+<img src="2.png" width="45%"><br>
+<img src="3.png" width="45%">  
+<img src="4.png" width="45%"><br>
 
 </div>
 
